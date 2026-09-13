@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Sort()</title>
+</head>
+<body>
+
+	<h1>Ordina gli elementi</h1>
+	<button id="price">Ordina per prezzo</button>
+	<button id="name">Ordina per nome</button>
+
+	<div id="shoesElements"></div>
+
+	<script>
+		const shoes = [
+			{ name: "Nike", price: 200, order: 1 },
+			{ name: "Arena", price: 124, order: 2 },
+			{ name: "Adidas", price: 247, order: 3 },
+			{ name: "Vans", price: 190, order: 4 },
+			{ name: "adidas", price: 247, order: 5 },
+			{ name: "Joma", price: 230, order: 6 }
+		];
+
+		const priceBtn = document.querySelector('#price');
+		const nameBtn = document.querySelector('#name');
+		const shoesElements = document.querySelector('#shoesElements');
+
+		priceBtn.addEventListener('click', () => {
+			shoes.sort((a, b)=> {
+				return a.price - b.price;
+			});
+			displayShoes(shoes);
+			console.log('Array shoes in ordine di prezzo:', shoes);
+		});
+
+		nameBtn.addEventListener('click', () => {
+			shoes.sort((a, b)=> {
+				console.log(a.name);
+				console.log(b.name);
+				return a.name.localeCompare(b.name);
+			});
+			displayShoes(shoes);
+			console.log('Array shoes in ordine di nome:', shoes);
+		});
+
+		function displayShoes(shoes) {
+			shoesElements.innerHTML = "";
+			shoes.forEach(element => {
+				shoesElements.innerHTML += `<p><span style="color: red;">${ element.order}</span> - ${element.name}, ${ element.price}</p>`;
+			});
+		};
+
+		displayShoes(shoes);
+
+	</script>
+</body>
+</html>
