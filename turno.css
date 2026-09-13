@@ -1,0 +1,581 @@
+/* ============================================================
+   Turno Settimanale Sale Operatorie - Stili
+   Ottimizzato per stampa A4 orizzontale (landscape)
+   ============================================================ */
+
+:root {
+  --color-primary: #1b5e7a;       /* teal scuro istituzionale */
+  --color-primary-dark: #103f52;
+  --color-accent: #2e8b9e;
+  --color-soft: #eaf3f6;
+  --color-soft-2: #f4f9fb;
+  --color-border: #c9d6db;
+  --color-text: #1f2d34;
+  --color-muted: #5a6b73;
+  --color-success: #2e7d32;
+  --color-warning: #b8860b;
+  --color-weekend: #fbe9e7;
+  --color-weekend-header: #b94a48;
+  --color-category: #1b5e7a;
+  --color-subcategory: #eef4f6;
+  --color-row-alt: #f7fbfc;
+
+  /* --- Colorazione Mattina / Pomeriggio --- */
+  --color-morning: #eef6fb;          /* azzurro tenue */
+  --color-morning-alt: #e3f0f7;
+  --color-morning-header: #2e7ba8;
+  --color-morning-border: #bcd6e6;
+
+  --color-afternoon: #fff6ec;        /* arancio tenue */
+  --color-afternoon-alt: #fcefdf;
+  --color-afternoon-header: #c8791f;
+  --color-afternoon-border: #ecd6b5;
+
+  --color-weekend-morn: #f7d9d4;
+  --color-weekend-morn-alt: #f3d0ca;
+  --color-weekend-aft: #f6d9c9;
+  --color-weekend-aft-alt: #f2cfbb;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: var(--color-text);
+  background: #e9eef1;
+  -webkit-font-smoothing: antialiased;
+  padding: 18px 12px 40px;
+}
+
+/* ---------- Contenitore applicazione ---------- */
+.app {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+/* ---------- Barra di controllo (non stampata) ---------- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: #fff;
+  padding: 14px 20px;
+  border-radius: 10px 10px 0 0;
+  box-shadow: 0 4px 14px rgba(16, 63, 82, 0.25);
+}
+
+.toolbar__title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.toolbar__logo {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--color-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; font-weight: 700;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.25);
+}
+
+.toolbar__nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-btn {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  width: 40px; height: 38px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.nav-btn:hover { background: rgba(255,255,255,0.3); }
+.nav-btn:active { transform: scale(0.96); }
+
+.week-display {
+  background: rgba(255,255,255,0.95);
+  color: var(--color-primary-dark);
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  min-width: 230px;
+  text-align: center;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+}
+
+.toolbar__actions { display: flex; gap: 8px; }
+
+/* ---------- Switch vista (Sale Operatorie / Servizi) ---------- */
+.toolbar__view-switch {
+  display: flex;
+  gap: 4px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 8px;
+  padding: 3px;
+}
+.view-tab {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.8);
+  padding: 7px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.view-tab:hover { background: rgba(255,255,255,0.15); color: #fff; }
+.view-tab.active {
+  background: #fff;
+  color: var(--color-primary-dark);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+
+.action-btn {
+  background: #fff;
+  color: var(--color-primary-dark);
+  border: none;
+  padding: 9px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: flex; align-items: center; gap: 6px;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.action-btn:hover { background: #f0f6f8; }
+.action-btn:active { transform: scale(0.97); }
+
+/* ---------- Foglio A4 ---------- */
+.sheet {
+  background: #fff;
+  padding: 26px 30px 22px;
+  border: 1px solid var(--color-border);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+
+/* ---------- Intestazione documento ---------- */
+.doc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-bottom: 3px solid var(--color-primary);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+
+.doc-header__left h1 {
+  font-size: 1.45rem;
+  color: var(--color-primary-dark);
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+.doc-header__left p {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  margin-top: 2px;
+}
+
+.doc-header__right {
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+.doc-header__right strong { color: var(--color-primary-dark); font-size: 0.95rem; }
+
+/* ---------- Tabella turno ---------- */
+.turno {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.82rem;
+}
+
+/* Riga di intestazione sezione (MATTINA / POMERIGGIO) */
+.section-bar td {
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-dark));
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  text-align: center;
+  padding: 6px 8px;
+  border: 1px solid var(--color-primary-dark);
+}
+.section-bar.morning td {
+  background: linear-gradient(90deg, var(--color-morning-header), #236084);
+  border-color: var(--color-morning-header);
+}
+.section-bar.afternoon td {
+  background: linear-gradient(90deg, var(--color-afternoon-header), #a86518);
+  border-color: var(--color-afternoon-header);
+}
+
+.turno th, .turno td {
+  border: 1px solid var(--color-border);
+  vertical-align: middle;
+  padding: 6px 7px;
+  word-wrap: break-word;
+}
+
+/* Prima colonna: etichette riga */
+.turno th.col-cat {
+  width: 130px;
+  background: var(--color-category);
+  color: #fff;
+  text-align: left;
+  font-weight: 600;
+  padding-left: 10px;
+}
+
+/* Intestazioni giorni */
+.turno thead th.day {
+  background: var(--color-primary);
+  color: #fff;
+  text-align: center;
+  font-weight: 600;
+  padding: 7px 4px;
+  line-height: 1.2;
+}
+.turno thead th.day .day-name { display: block; font-size: 0.8rem; }
+.turno thead th.day .day-num  { display: block; font-size: 1.05rem; font-weight: 700; }
+
+.turno thead th.day.weekend {
+  background: var(--color-weekend-header);
+}
+.turno td.cell.weekend { background: var(--color-weekend); }
+
+/* ---------- Colorazione celle MATTINA ---------- */
+.turno td.cell.morning { background: var(--color-morning); }
+.turno tbody tr.morning-row:nth-child(even) td.cell.morning { background: var(--color-morning-alt); }
+.turno td.cell.morning.weekend { background: var(--color-weekend-morn); }
+.turno tbody tr.morning-row:nth-child(even) td.cell.morning.weekend { background: var(--color-weekend-morn-alt); }
+
+/* ---------- Colorazione celle POMERIGGIO ---------- */
+.turno td.cell.afternoon { background: var(--color-afternoon); }
+.turno tbody tr.afternoon-row:nth-child(even) td.cell.afternoon { background: var(--color-afternoon-alt); }
+.turno td.cell.afternoon.weekend { background: var(--color-weekend-aft); }
+.turno tbody tr.afternoon-row:nth-child(even) td.cell.afternoon.weekend { background: var(--color-weekend-aft-alt); }
+
+/* Bordi colorati per distingueremorare i blocchi */
+.turno td.cell.morning { border-color: var(--color-morning-border); }
+.turno td.cell.afternoon { border-color: var(--color-afternoon-border); }
+
+/* ---------- Righe neutral (Reperibilità / Assenze) ---------- */
+.turno td.cell.neutral { background: #ffffff; }
+.turno tbody tr.neutral-row:nth-child(even) td.cell.neutral { background: var(--color-row-alt); }
+.turno td.cell.neutral.weekend { background: var(--color-weekend); }
+.turno tbody tr.neutral-row:nth-child(even) td.cell.neutral.weekend { background: #f9e4e1; }
+.turno td.col-cat.neutral { background: var(--color-subcategory); }
+.turno td.col-cat.neutral.sub { background: var(--color-subcategory); }
+
+/* ---------- Input modificabile nomi sale ---------- */
+.room-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  padding: 2px 4px;
+  border-radius: 4px;
+  text-align: left;
+  outline: none;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.room-input:hover { background: rgba(255,255,255,0.25); }
+.room-input:focus {
+  background: #fff;
+  color: var(--color-primary-dark);
+  box-shadow: 0 0 0 2px var(--color-accent);
+}
+/* Per righe sottocategoria (sfondo chiaro) */
+.turno td.col-cat.sub .room-input:hover { background: rgba(27,94,122,0.08); }
+.turno td.col-cat.sub .room-input:focus { background: #fff; }
+/* Cursore che suggerisce la modificabilità */
+.turno td.col-cat { cursor: text; }
+
+/* Celle di contenuto: testo centrato */
+.turno td.cell {
+  text-align: center;
+}
+.turno td.col-cat {
+  text-align: left;
+}
+
+/* ---------- Celle modificabili (Sale, Lun-Ven) ---------- */
+.editable-cell {
+  padding: 3px 4px !important;
+}
+.cell-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+}
+.cell-fields.team-only {
+  gap: 0;
+  align-items: center;
+}
+/* Stili per i div statici usati in modalità stampa (compatibilità wkhtmltopdf) */
+.cell-field-print {
+  width: 100%;
+  font: inherit;
+  color: var(--color-text);
+  padding: 2px 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.3;
+  text-align: center;
+}
+.cell-field-print.specialty {
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  font-size: 0.76rem;
+}
+.cell-field-print.team {
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+.cell-field {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  color: var(--color-text);
+  padding: 2px 4px;
+  border-radius: 4px;
+  outline: none;
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+/* Stili specifici per le textarea (campo Equipe multilinea) */
+textarea.cell-field {
+  resize: none;
+  overflow: hidden;
+  min-height: 1.5em;
+  line-height: 1.3;
+  font-family: inherit;
+}
+.cell-field.specialty {
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  font-size: 0.76rem;
+}
+.cell-field.team {
+  font-size: 0.76rem;
+  line-height: 1.3;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.cell-field::placeholder {
+  color: #c5d3da;
+  font-weight: 400;
+  text-transform: none;
+  font-size: 0.7rem;
+  font-style: italic;
+  opacity: 0.7;
+}
+.cell-field.specialty::placeholder {
+  color: #bccfd6;
+  opacity: 0.6;
+}
+.cell-field:hover {
+  border-color: rgba(27,94,122,0.3);
+  background: rgba(255,255,255,0.6);
+}
+.cell-field:focus {
+  border-color: var(--color-accent);
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(46,139,158,0.15);
+}
+/* Sfondo leggero per distinguere le celle editabili (solo a video) */
+@media screen {
+  .turno td.cell.editable { cursor: text; }
+}
+
+/* In stampa gli input diventano testo normale */
+@media print {
+  .cell-field {
+    border: none;
+    background: transparent;
+    padding: 0;
+  }
+  .cell-field.specialty { font-size: 0.72rem; }
+  .cell-field.team { font-size: 0.72rem; }
+  textarea.cell-field {
+    overflow: visible;
+    height: auto !important;
+  }
+}
+
+/* Classe .printing applicata via JS durante la stampa (compatibile wkhtmltopdf) */
+body.printing .cell-field::placeholder,
+body.printing .cell-field::-webkit-input-placeholder,
+body.printing .cell-field::-moz-placeholder {
+  color: transparent !important;
+  font-size: 0 !important;
+  opacity: 0 !important;
+}
+body.printing .cell-field {
+  border: none;
+  background: transparent;
+}
+body.printing textarea.cell-field {
+  overflow: visible;
+  height: auto !important;
+}
+
+/* Righe categoria principali */
+.turno tr.cat-main td.col-cat {
+  background: var(--color-category);
+  color: #fff;
+}
+.turno td.col-cat {
+  background: var(--color-subcategory);
+  color: var(--color-primary-dark);
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding-left: 10px;
+}
+
+/* Righe alternate per leggibilità */
+.turno tbody tr:nth-child(even) td.cell { background: var(--color-row-alt); }
+.turno tbody tr:nth-child(even) td.cell.weekend { background: #f9e4e1; }
+
+/* Contenuto celle */
+.cell-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  text-align: center;
+}
+.cell-specialty {
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  text-align: center;
+}
+.cell-staff { color: var(--color-text); font-size: 0.78rem; line-height: 1.35; text-align: center; }
+.cell-note { color: var(--color-muted); font-style: italic; font-size: 0.72rem; text-align: center; }
+
+.tag {
+  display: inline-block;
+  font-size: 0.66rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.tag-urgenza { background: #fdecea; color: #b94a48; border: 1px solid #f5c6c1; }
+.tag-ferie   { background: #fff4e5; color: #b8860b; border: 1px solid #f3d9a6; }
+.tag-rip     { background: #e8f5e9; color: #2e7d32; border: 1px solid #c5e3c8; }
+.tag-rep     { background: #e3f2fd; color: #1565c0; border: 1px solid #b3dbf2; }
+
+.empty-cell { color: #c9d6db; text-align: center; font-size: 0.75rem; }
+
+/* ---------- Footer / firma ---------- */
+.doc-footer {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.signature {
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+.signature__line {
+  display: inline-block;
+  width: 180px;
+  border-top: 1px solid var(--color-muted);
+  margin-top: 28px;
+  padding-top: 3px;
+}
+
+/* ============================================================
+   STAMPA - A4 landscape
+   ============================================================ */
+@page {
+  size: A4 landscape;
+  margin: 8mm;
+}
+
+@media print {
+  body { background: #fff; padding: 0; }
+  .toolbar, .no-print { display: none !important; }
+  .app { max-width: none; }
+  .sheet {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 6px 8px;
+  }
+  .turno { font-size: 0.72rem; }
+  .turno th, .turno td { padding: 4px 5px; }
+  .turno th.col-cat { width: 110px; }
+  /* In stampa: nomi sale come testo normale, bordi colorati più tenui */
+  .room-input { border: none; box-shadow: none; background: transparent; }
+  .section-bar td { font-size: 0.7rem; padding: 4px 8px; }
+  .doc-header__left h1 { font-size: 1.2rem; }
+  .doc-header { margin-bottom: 8px; padding-bottom: 6px; }
+  .doc-footer { margin-top: 8px; }
+  .signature__line { margin-top: 18px; width: 150px; }
+}
+
+/* ---------- Hint modificabilità (non stampato) ---------- */
+.edit-hint {
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  margin-left: 8px;
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Etichetta piccola che mostra modalità mattina/pomeriggio nella legenda */
+.legend .morn-dot, .legend .aft-dot {
+  display: inline-block; width: 12px; height: 12px; border-radius: 3px;
+  vertical-align: middle; margin-right: 4px; border: 1px solid rgba(0,0,0,0.1);
+}
+.legend .morn-dot { background: var(--color-morning); }
+.legend .aft-dot  { background: var(--color-afternoon); }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar__nav { justify-content: center; }
+  .toolbar__actions { justify-content: center; }
+  .turno { font-size: 0.7rem; }
+}

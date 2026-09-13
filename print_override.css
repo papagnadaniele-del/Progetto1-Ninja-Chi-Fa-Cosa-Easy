@@ -1,0 +1,10 @@
+input.cell-field::placeholder, textarea.cell-field::placeholder,
+input.cell-field::-webkit-input-placeholder, textarea.cell-field::-webkit-input-placeholder,
+input.cell-field::-moz-placeholder, textarea.cell-field::-moz-placeholder {
+  color: transparent !important; font-size: 0 !important; opacity: 0 !important;
+}
+input.cell-field, textarea.cell-field {
+  border: none !important; background: transparent !important;
+  overflow: visible !important;
+}
+textarea.cell-field { height: auto !important; }
