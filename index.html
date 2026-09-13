@@ -1,7 +1,796 @@
-Daniele
-test@gmail.com
-Ciao, sono Dany e questo è il mio canale.
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turno Settimanale Sale Operatorie</title>
+<link rel="stylesheet" href="turno.css">
+</head>
+<body>
+<div class="app">
 
-<h4>Dany</h4>
-<h1>test@gmail.com</h1>
-<p>Ciao, sono DANY e questo è il mio canale.</p>
+  <!-- ============ BARRA DI CONTROLLO (non stampata) ============ -->
+  <div class="toolbar no-print">
+    <div class="toolbar__title">
+      <div class="toolbar__logo" id="toolbarLogo">SO</div>
+      <span id="toolbarTitle">Gestione Infermieri · Sale Operatorie</span>
+    </div>
+
+    <div class="toolbar__view-switch no-print">
+      <button class="view-tab active" data-view="sale" id="tabSale">Sale Operatorie</button>
+      <button class="view-tab" data-view="servizi" id="tabServizi">Servizi</button>
+    </div>
+
+    <div class="toolbar__nav">
+      <button class="nav-btn" id="prevWeek" title="Settimana precedente">‹</button>
+      <div class="week-display" id="weekDisplay">—</div>
+      <button class="nav-btn" id="nextWeek" title="Settimana successiva">›</button>
+      <button class="nav-btn" id="todayWeek" title="Settimana corrente" style="width:auto;padding:0 12px;font-size:0.8rem;">Oggi</button>
+    </div>
+
+    <div class="toolbar__actions">
+      <button class="action-btn" id="printBtn">🖨 Stampa A4</button>
+    </div>
+  </div>
+
+  <!-- ============ FOGLIO A4 ============ -->
+  <div class="sheet">
+
+    <!-- Intestazione -->
+    <div class="doc-header">
+      <div class="doc-header__left">
+        <h1 id="docTitle">Turno Settimanale Infermieri · Sale Operatorie</h1>
+        <p id="docSubtitle">Assegnazione del personale infermieristico alle sale e servizi di reparto<span class="edit-hint no-print">· i nomi delle sale sono modificabili (clicca sulla cella)</span></p>
+      </div>
+      <div class="doc-header__right">
+        <div>Settimana n. <strong id="weekNumber">—</strong></div>
+        <div id="weekRange">—</div>
+      </div>
+    </div>
+
+    <!-- Tabella turno -->
+    <table class="turno" id="turnoTable">
+      <thead id="turnoHead"></thead>
+      <tbody id="turnoBody"></tbody>
+    </table>
+
+    <!-- Footer / firme -->
+    <div class="doc-footer">
+      <div class="signature">
+        Il Coordinatore infermieristico
+        <div class="signature__line"></div>
+      </div>
+    </div>
+
+  </div><!-- /.sheet -->
+</div><!-- /.app -->
+
+<script>
+/* ============================================================
+   TURNO SETTIMANALE — v2
+   - Due blocchi: MATTINA e POMERIGGIO
+   - Nomi delle sale modificabili (salvati in localStorage)
+   - Celle colorate per turno (mattina azzurro / pomeriggio arancio)
+   ============================================================ */
+
+const giorniNomi = ["Domenica","Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato"];
+const mesiNomi = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno",
+                  "Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+
+/* ---------- Definizione righe per blocco ----------
+   type: "cat" (categoria principale) | "sub" (sottocategoria)
+   editable: true se il nome è modificabile dall'utente (le sale)
+*/
+const morningRows = [
+  { id:"salaA",   label:"Sala A",            type:"cat", editable:true, editableCells:true },
+  { id:"salaB",   label:"Sala B",            type:"cat", editable:true, editableCells:true },
+  { id:"salaE",   label:"Sala E",            type:"cat", editable:true, editableCells:true }
+];
+
+const afternoonRows = [
+  { id:"salaA_pom", label:"Sala A",            type:"cat", editable:true, linkTo:"salaA", editableCells:true },
+  { id:"salaB_pom", label:"Sala B",            type:"cat", editable:true, linkTo:"salaB", editableCells:true },
+  { id:"salaE_pom", label:"Sala E",            type:"cat", editable:true, linkTo:"salaE", editableCells:true }
+];
+
+const fullDayRows = [
+  { id:"rep",     label:"Reperibilità",      type:"cat", editable:false, editableTeam:true },
+  { id:"assenze", label:"Assenze",           type:"cat", editable:false, editableTeam:true }
+];
+
+/* ---------- VISTA SERVIZI ---------- */
+const serviziMorningRows = [
+  { id:"ancona",  label:"Ancona",            type:"cat", editable:false, editableTeam:true },
+  { id:"accVasc", label:"Accessi Vascolari", type:"cat", editable:false, editableTeam:true },
+  { id:"ster1",   label:"Sterilizzazione",   type:"cat", editable:false, editableTeam:true },
+  { id:"uff1",    label:"Ufficio",           type:"cat", editable:false, editableTeam:true }
+];
+
+const serviziAfternoonRows = [
+  { id:"ster2",   label:"Sterilizzazione",   type:"cat", editable:false, editableTeam:true },
+  { id:"uff2",    label:"Ufficio",           type:"cat", editable:false, editableTeam:true }
+];
+
+/* Mappa completa per lookup */
+const allRows = [...morningRows, ...afternoonRows, ...fullDayRows];
+const rowById = {};
+allRows.forEach(r => rowById[r.id] = r);
+
+/* ============================================================
+   PERSISTENZA NOMI SALE (localStorage)
+   ============================================================ */
+const ROOM_NAMES_KEY = "turno_room_names";
+function loadRoomNames() {
+  try { return JSON.parse(localStorage.getItem(ROOM_NAMES_KEY)) || {}; }
+  catch(e) { return {}; }
+}
+function saveRoomNames(names) {
+  localStorage.setItem(ROOM_NAMES_KEY, JSON.stringify(names));
+}
+let roomNames = loadRoomNames();
+function getRoomLabel(id, fallback) {
+  return roomNames[id] || fallback;
+}
+function setRoomLabel(id, value) {
+  if (value && value.trim()) roomNames[id] = value.trim();
+  else delete roomNames[id];
+  saveRoomNames(roomNames);
+}
+
+/* ============================================================
+   PERSISTENZA CONTENUTO CELLE (Specialità + Equipe)
+   Salvata per settimana. Chiave: turno_cells_<lunedìISO>
+   Struttura: { "<rowId>_<dayIndex>": { specialty, team } }
+   ============================================================ */
+function cellsKey(monday) { return "turno_cells_" + isoDate(monday); }
+function loadCells(monday) {
+  try { return JSON.parse(localStorage.getItem(cellsKey(monday))) || {}; }
+  catch(e) { return {}; }
+}
+function saveCells(monday, data) {
+  localStorage.setItem(cellsKey(monday), JSON.stringify(data));
+}
+
+/* ============================================================
+   DATI TURNO (per settimana)
+   ============================================================ */
+function cell(specialty, staff, note) {
+  let html = '<div class="cell-content">';
+  if (specialty) html += '<span class="cell-specialty">' + specialty + '</span>';
+  if (staff)     html += '<span class="cell-staff">' + staff + '</span>';
+  if (note)      html += '<span class="cell-note">' + note + '</span>';
+  html += '</div>';
+  return html;
+}
+function tag(text, cls) { return '<span class="tag ' + cls + '">' + text + '</span>'; }
+function empty() { return '<span class="empty-cell">—</span>'; }
+
+/* Settimana 1: Lun 15 Giugno 2026 */
+const week1 = {
+  salaA: [
+    cell("Oculistica","CHIUCCONI · SDEO · GHINELLI"),
+    cell("Chir. Torrette","BORRONI · SDEO"),
+    cell("Ortopedia","GIUGGIO · SCHIRO · GHINELLI"),
+    cell("Chir. Osimo","MARCHETTI · SDEO · SCHIRONE"),
+    cell("Chir. Osimo","GIUGGIOLONI · SCHIRONE"),
+    cell("","BORRONI · SDEO", tag("J","tag-rep")), empty()
+  ],
+  salaB: [
+    tag("ev. urgenza","tag-urgenza"),
+    tag("ev. urgenza","tag-urgenza"),
+    tag("ev. urgenza","tag-urgenza"),
+    tag("ev. urgenza","tag-urgenza"),
+    cell("Ortopedia Torrette","CHIUCCONI · MARCHETTI · GHINELLI"),
+    empty(), empty()
+  ],
+  salaE: [
+    cell("Amb. Dermatologia","GIUGGIOLONI · SCHIRONE"),
+    cell("Amb. Chirurgico","MOBIDONI · PESARESI"),
+    cell("Amb. Dermatologia","PAPAGGI · GABBANI"),
+    cell("Amb. Ortopedia","CHIUCCONI · PESARESI"),
+    cell("Amb. Medicazioni","GABBANELLI"),
+    cell("","PAPAGNA · GABBANELLI", tag("J","tag-rep")), empty()
+  ],
+  ancona: [
+    cell("","PAPAGNA"), empty(), empty(), empty(), empty(), empty(), empty()
+  ],
+  accVasc: [ empty(), empty(), empty(), empty(), empty(), empty(), empty() ],
+  ster1: [
+    cell("","GIUGGIOLONI / PILESI"),
+    cell("","MARCHETTI"),
+    cell("","CHIUCCI · PILESI"),
+    cell("","ORTOPEDIA Osimo"),
+    cell("","CHIRURGIA Torrette"),
+    empty(), empty()
+  ],
+  uff1: [
+    empty(), empty(), empty(),
+    cell("","MARCHETTI · GABBANELLI · PESARESI"),
+    cell("","PAPAGNA · GHINELLI · SCHIRONE"),
+    cell("","MORBIDONI · SDEO", tag("J","tag-rep")), empty()
+  ],
+  salaA_pom: [
+    empty(), empty(), empty(), empty(),
+    cell("","BORRONI · SDEO"),
+    cell("","GIUGGIOLONI · SCHIRONE", tag("J","tag-rep")), empty()
+  ],
+  salaB_pom: [
+    empty(), empty(), empty(), empty(),
+    tag("ev. urgenza","tag-urgenza"),
+    empty(), empty()
+  ],
+  salaE_pom: [
+    empty(), empty(), empty(), empty(),
+    cell("Amb. Medicazioni","GABBANELLI"),
+    cell("","PAPAGNA · GABBANELLI", tag("J","tag-rep")), empty()
+  ],
+  ster2: [ empty(), empty(), empty(), empty(), empty(), empty(), empty() ],
+  uff2:  [ empty(), empty(), empty(), empty(), empty(), empty(), empty() ],
+  rep: [
+    cell("","MORBIDONI", tag("REP","tag-rep")),
+    cell("","PAPAGNA (+sale)", tag("REP","tag-rep")),
+    cell("","PILESI", tag("REP","tag-rep")),
+    cell("","CHIR. Osimo / Amb. Chir.", tag("REP","tag-rep")),
+    cell("","PAPAGNA · GHINELLI · GABBANELLI", tag("REP","tag-rep")),
+    cell("","MORBIDONI · PESARESI", tag("REP","tag-rep") + " " + tag("J","tag-rep")),
+    cell("","MORBIDONI · PESARESI", tag("REP","tag-rep"))
+  ],
+  assenze: [
+    cell("","MORBIDONI " + tag("RIP","tag-rip") + " · ZITTI " + tag("FERIE","tag-ferie") + " · GRASSI " + tag("FERIE","tag-ferie")),
+    cell("","ZITTI " + tag("FERIE","tag-ferie") + " · GRASSI " + tag("FERIE","tag-ferie") + " · GABBANELLI " + tag("RIP","tag-rip") + " · CHIUCCONI 104"),
+    cell("","ZITTI " + tag("FERIE","tag-ferie") + " · GRASSI " + tag("FERIE","tag-ferie")),
+    cell("","ZITTI " + tag("FERIE","tag-ferie") + " · GRASSI " + tag("FERIE","tag-ferie") + " · BORRONI CS"),
+    cell("","ZITTI " + tag("FERIE","tag-ferie") + " · GRASSI " + tag("FERIE","tag-ferie")),
+    cell("","ZITTI " + tag("FERIE","tag-ferie") + " · GRASSI " + tag("FERIE","tag-ferie")),
+    cell("","ZITTI " + tag("FERIE","tag-ferie") + " · GRASSI " + tag("FERIE","tag-ferie"))
+  ]
+};
+
+/* Settimana 2: Lun 22 Giugno 2026 */
+const week2 = {
+  salaA: [
+    cell("Chir. Torrette","BORRONI · SDEO · MARCHETTI"),
+    cell("Ortopedia","GIUGGIO · SCHIRO · GHINELLI"),
+    cell("Oculistica","CHIUCCONI · SDEO · GHINELLI"),
+    cell("Chir. Osimo","GIUGGIOLONI · SCHIRONE"),
+    cell("Ortopedia Torrette","CHIUCCONI · MARCHETTI · GHINELLI"),
+    cell("","PAPAGNA · GABBANELLI", tag("J","tag-rep")), empty()
+  ],
+  salaB: [
+    tag("ev. urgenza","tag-urgenza"), tag("ev. urgenza","tag-urgenza"),
+    tag("ev. urgenza","tag-urgenza"), tag("ev. urgenza","tag-urgenza"),
+    tag("ev. urgenza","tag-urgenza"), empty(), empty()
+  ],
+  salaE: [
+    cell("Amb. Chirurgico","MOBIDONI · PESARESI"),
+    cell("Amb. Dermatologia","PAPAGGI · GABBANI"),
+    cell("Amb. Dermatologia","GIUGGIOLONI · SCHIRONE"),
+    cell("Amb. Ortopedia","CHIUCCONI · PESARESI"),
+    cell("Amb. Medicazioni","GABBANELLI · MARCHETTI"),
+    empty(), empty()
+  ],
+  ancona:  [ empty(), empty(), empty(), empty(), empty(), empty(), empty() ],
+  accVasc: [ empty(), empty(), empty(), empty(), empty(), empty(), empty() ],
+  ster1: [
+    cell("","PILESI · CHIUCCI"),
+    cell("","MARCHETTI · GIUGGIOLONI"),
+    cell("","ORTOPEDIA Osimo"),
+    cell("","CHIRURGIA Torrette"),
+    cell("","CHIR. Osimo"),
+    empty(), empty()
+  ],
+  uff1: [
+    empty(), empty(), empty(),
+    cell("","GABBANELLI · PESARESI · SCHIRONE"),
+    cell("","PAPAGNA · GHINELLI"),
+    cell("","MORBIDONI · SDEO", tag("J","tag-rep")), empty()
+  ],
+  salaA_pom: [
+    empty(), empty(), empty(), empty(),
+    cell("Ortopedia Torrette","CHIUCCONI · MARCHETTI · GHINELLI"),
+    cell("","PAPAGNA · GABBANELLI", tag("J","tag-rep")), empty()
+  ],
+  salaB_pom: [
+    empty(), empty(), empty(), empty(),
+    tag("ev. urgenza","tag-urgenza"),
+    empty(), empty()
+  ],
+  salaE_pom: [
+    empty(), empty(), empty(), empty(),
+    cell("Amb. Medicazioni","GABBANELLI · MARCHETTI"),
+    empty(), empty()
+  ],
+  ster2: [ empty(), empty(), empty(), empty(), empty(), empty(), empty() ],
+  uff2:  [ empty(), empty(), empty(), empty(), empty(), empty(), empty() ],
+  rep: [
+    cell("","PILESI", tag("REP","tag-rep")),
+    cell("","MORBIDONI", tag("REP","tag-rep")),
+    cell("","PAPAGNA (+sale)", tag("REP","tag-rep")),
+    cell("","CHIR. Osimo / Amb. Chir.", tag("REP","tag-rep")),
+    cell("","BORRONI · SDEO · PESARESI", tag("REP","tag-rep")),
+    cell("","GIUGGIOLONI · MORBIDONI", tag("REP","tag-rep")),
+    cell("","GIUGGIOLONI · MORBIDONI", tag("REP","tag-rep"))
+  ],
+  assenze: [
+    cell("","ZITTI " + tag("FERIE","tag-ferie") + " · GRASSI " + tag("FERIE","tag-ferie")),
+    cell("","ZITTI " + tag("FERIE","tag-ferie") + " · GRASSI " + tag("FERIE","tag-ferie") + " · MORBIDONI " + tag("RIP","tag-rip")),
+    cell("","ZITTI " + tag("FERIE","tag-ferie") + " · GRASSI " + tag("FERIE","tag-ferie")),
+    cell("","ZITTI " + tag("FERIE","tag-ferie") + " · GRASSI " + tag("FERIE","tag-ferie")),
+    cell("","ZITTI " + tag("FERIE","tag-ferie") + " · GRASSI " + tag("FERIE","tag-ferie")),
+    cell("","ZITTI " + tag("FERIE","tag-ferie") + " · GRASSI " + tag("FERIE","tag-ferie")),
+    cell("","ZITTI " + tag("FERIE","tag-ferie") + " · GRASSI " + tag("FERIE","tag-ferie"))
+  ]
+};
+
+const weeksData = { "2026-06-15": week1, "2026-06-22": week2 };
+
+/* ============================================================
+   LOGICA RENDERING
+   ============================================================ */
+function getMonday(d) {
+  const date = new Date(d);
+  const day = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - day);
+  date.setHours(0,0,0,0);
+  return date;
+}
+function isoDate(d) { return d.toISOString().slice(0,10); }
+function weekNumber(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - dayNum + 3);
+  const firstThu = new Date(Date.UTC(date.getUTCFullYear(),0,4));
+  return 1 + Math.round(((date - firstThu) / 86400000 - 3 + ((firstThu.getUTCDay()+6)%7)) / 7);
+}
+
+let currentMonday = getMonday(new Date());
+let currentView = "sale"; /* "sale" = Sale Operatorie, "servizi" = Servizi */
+
+/* Crea una cella-etichetta riga (con input modificabile se editable) */
+function makeLabelCell(row, sectionClass) {
+  const td = document.createElement("td");
+  td.className = "col-cat" + (row.type === "sub" ? " sub" : "") + " " + sectionClass;
+  if (row.editable) {
+    const input = document.createElement("input");
+    input.className = "room-input";
+    input.type = "text";
+    /* Se la riga è collegata a un'altra (es. sale pomeridiane -> sale mattino),
+       usa la stessa chiave di salvataggio per condividere il nome */
+    const storageId = row.linkTo || row.id;
+    input.value = getRoomLabel(storageId, row.label);
+    input.placeholder = row.label;
+    input.setAttribute("aria-label", "Nome " + row.label);
+    input.addEventListener("change", () => {
+      setRoomLabel(storageId, input.value);
+      /* Aggiorna tutte le celle collegate allo stesso storageId */
+      each(document.querySelectorAll('input.room-input[data-store="' + storageId + '"]'), (el) => {
+        if (el !== input) el.value = getRoomLabel(storageId, row.label);
+      });
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { input.blur(); }
+    });
+    input.setAttribute("data-store", storageId);
+    td.appendChild(input);
+  } else {
+    td.textContent = row.label;
+  }
+  return td;
+}
+
+/* Auto-resize di una textarea in base al contenuto */
+function autoResize(el) {
+  // In modalità stampa, calcola l'altezza in base al numero di righe
+  // (più affidabile in wkhtmltopdf che non supporta bene scrollHeight)
+  const isPrintMode = window.location.search.indexOf('print=1') !== -1;
+  if (isPrintMode) {
+    const lines = (el.value || "").split("\n");
+    const lineCount = Math.max(1, lines.length);
+    el.style.height = (lineCount * 1.35) + "em";
+    return;
+  }
+  el.style.height = "auto";
+  el.style.height = el.scrollHeight + "px";
+}
+
+/* Estrae testo semplice da una stringa HTML (per i dati precompilati delle settimane).
+   Sostituisce i tag con testo leggibile (es. tag FERIE -> "FERIE", separatori ·, ecc.) */
+function htmlToText(html) {
+  if (!html) return "";
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  // Sostituisci <br> con a capo
+  each(tmp.querySelectorAll("br"), function(br) {
+    // Compatibile QtWebKit: replaceWith non supportato, usa parentNode
+    var txt = document.createTextNode("\n");
+    if (br.parentNode) br.parentNode.replaceChild(txt, br);
+  });
+  // Aggiungi uno spazio prima del testo di ogni tag (es. REP, FERIE, J)
+  each(tmp.querySelectorAll(".tag"), function(t) {
+    t.insertAdjacentText("beforebegin", " ");
+  });
+  let text = tmp.textContent || "";
+  text = text.replace(/[ \t]+/g, " ").trim();
+  // Se il testo è solo un em-dash (cella vuota), ritorna stringa vuota
+  if (text === "—" || text === "--" || text === "— ") return "";
+  return text;
+}
+
+/* Crea una riga di contenuto */
+function makeRow(row, days, data, sectionClass, cellsData, monday) {
+  const tr = document.createElement("tr");
+  tr.className = sectionClass + "-row";
+  if (row.type === "cat") tr.classList.add("cat-main");
+
+  tr.appendChild(makeLabelCell(row, sectionClass));
+
+  const rowData = data[row.id] || [];
+  const isPrintMode = window.location.search.indexOf('print=1') !== -1;
+
+  for (let i = 0; i < days.length; i++) {
+    const td = document.createElement("td");
+    td.className = "cell " + sectionClass;
+    if (i >= 5) td.classList.add("weekend");
+
+    // Celle modificabili con Specialità + Equipe per Sale A/B/E (lun-ven = indici 0-4)
+    if (row.editableCells && i < 5) {
+      td.classList.add("editable");
+      const storageId = row.cellsLinkTo || row.id;
+      const cellKey = storageId + "_" + i;
+      const saved = cellsData[cellKey] || {};
+
+      // Se non c'è nulla salvato in localStorage, usa i dati precompilati come fallback
+      let initSpecialty = saved.specialty;
+      let initTeam = saved.team;
+      if (initSpecialty === undefined && initTeam === undefined) {
+        const preset = rowData[i];
+        if (preset && typeof preset === 'string' && preset.indexOf('cell-content') !== -1) {
+          // Estrai specialità ed equipe dalla stringa HTML precompilata
+          const tmp = document.createElement("div");
+          tmp.innerHTML = preset;
+          const specEl = tmp.querySelector(".cell-specialty");
+          const staffEl = tmp.querySelector(".cell-staff");
+          // Aggiungi spazi prima dei tag (REP, FERIE, J, ecc.)
+          each(tmp.querySelectorAll(".tag"), function(t) {
+            t.insertAdjacentText("beforebegin", " ");
+          });
+          if (specEl) initSpecialty = specEl.textContent || "";
+          if (staffEl) {
+            initTeam = (staffEl.textContent || "");
+            // Aggiungi eventuali tag dopo staff
+            var afterStaff = staffEl.nextSibling;
+            while (afterStaff) {
+              if (afterStaff.nodeType === 3) initTeam += afterStaff.textContent;
+              else if (afterStaff.nodeType === 1) initTeam += " " + afterStaff.textContent;
+              afterStaff = afterStaff.nextSibling;
+            }
+            initTeam = initTeam.replace(/[ \t]+/g, " ").trim();
+          }
+        }
+      }
+
+      const wrap = document.createElement("div");
+      wrap.className = "cell-fields";
+
+      if (isPrintMode) {
+        // In stampa: usa div statici (non editabili) per compatibilità wkhtmltopdf
+        const specDiv = document.createElement("div");
+        specDiv.className = "cell-field-print specialty";
+        specDiv.textContent = initSpecialty || "";
+        const teamDiv = document.createElement("div");
+        teamDiv.className = "cell-field-print team";
+        teamDiv.textContent = initTeam || "";
+        wrap.appendChild(specDiv);
+        if (initTeam) wrap.appendChild(teamDiv);
+      } else {
+        // Campo Specialità (input a riga singola)
+        const specInput = document.createElement("input");
+        specInput.type = "text";
+        specInput.className = "cell-field specialty";
+        specInput.value = initSpecialty || "";
+        specInput.placeholder = isPrintMode ? "" : "Specialità";
+        specInput.setAttribute("data-cellkey", cellKey);
+        specInput.setAttribute("data-field", "specialty");
+
+        // Campo Equipe (textarea multilinea con auto-resize)
+        const teamInput = document.createElement("textarea");
+        teamInput.className = "cell-field team";
+        teamInput.rows = 1;
+        teamInput.value = initTeam || "";
+        teamInput.placeholder = isPrintMode ? "" : "Equipe";
+        teamInput.setAttribute("data-cellkey", cellKey);
+        teamInput.setAttribute("data-field", "team");
+
+        const persist = () => {
+          const cur = loadCells(currentMonday);
+          const ck = specInput.getAttribute("data-cellkey");
+          if (!cur[ck]) cur[ck] = {};
+          cur[ck].specialty = specInput.value;
+          cur[ck].team = teamInput.value;
+          if (cur[ck].specialty || cur[ck].team) {
+            saveCells(currentMonday, cur);
+          } else {
+            delete cur[ck];
+            saveCells(currentMonday, cur);
+          }
+        };
+        specInput.addEventListener("change", persist);
+        teamInput.addEventListener("change", persist);
+        teamInput.addEventListener("input", () => autoResize(teamInput));
+        specInput.addEventListener("keydown", e => { if (e.key === "Enter") specInput.blur(); });
+
+        wrap.appendChild(specInput);
+        wrap.appendChild(teamInput);
+      }
+      td.appendChild(wrap);
+    }
+    // Celle modificabili con SOLO Equipe (multilinea) per Ancona, Accessi Vascolari,
+    // Sterilizzazione, Ufficio, Reperibilità, Assenze — tutti i 7 giorni
+    else if (row.editableTeam) {
+      td.classList.add("editable");
+      const storageId = row.id;
+      const cellKey = storageId + "_" + i;
+      const saved = cellsData[cellKey] || {};
+      // Se l'utente ha salvato un valore, usa quello; altrimenti usa il testo precompilato
+      let initialTeam = saved.team;
+      if (initialTeam === undefined) {
+        const preset = rowData[i];
+        if (preset !== undefined && preset !== "") {
+          initialTeam = htmlToText(preset);
+        } else {
+          initialTeam = "";
+        }
+      }
+
+      const wrap = document.createElement("div");
+      wrap.className = "cell-fields team-only";
+
+      if (isPrintMode) {
+        // In stampa: usa div statico
+        const teamDiv = document.createElement("div");
+        teamDiv.className = "cell-field-print team";
+        teamDiv.textContent = initialTeam || "";
+        if (initialTeam) wrap.appendChild(teamDiv);
+      } else {
+        const teamInput = document.createElement("textarea");
+        teamInput.className = "cell-field team";
+        teamInput.rows = 1;
+        teamInput.value = initialTeam || "";
+        teamInput.placeholder = "Equipe";
+        teamInput.setAttribute("data-cellkey", cellKey);
+        teamInput.setAttribute("data-field", "team");
+
+        const persist = () => {
+          const cur = loadCells(currentMonday);
+          const ck = teamInput.getAttribute("data-cellkey");
+          if (!cur[ck]) cur[ck] = {};
+          cur[ck].team = teamInput.value;
+          if (cur[ck].team) {
+            saveCells(currentMonday, cur);
+          } else {
+            delete cur[ck];
+            saveCells(currentMonday, cur);
+          }
+        };
+        teamInput.addEventListener("change", persist);
+        teamInput.addEventListener("input", () => autoResize(teamInput));
+
+        wrap.appendChild(teamInput);
+      }
+      td.appendChild(wrap);
+    }
+    else {
+      // Cella normale (dati precompilati o vuota)
+      if (rowData[i] !== undefined && rowData[i] !== "") {
+        td.innerHTML = rowData[i];
+      } else {
+        td.innerHTML = empty();
+      }
+    }
+    tr.appendChild(td);
+  }
+  return tr;
+}
+
+/* Crea la barra di sezione (MATTINA / POMERIGGIO) */
+function makeSectionBar(text, sectionClass, daysCount) {
+  const tr = document.createElement("tr");
+  tr.className = "section-bar " + sectionClass;
+  const td = document.createElement("td");
+  td.colSpan = daysCount + 1; // +1 per colonna etichette
+  td.textContent = text;
+  tr.appendChild(td);
+  return tr;
+}
+
+function render() {
+  const head = document.getElementById("turnoHead");
+  const body = document.getElementById("turnoBody");
+  head.innerHTML = "";
+  body.innerHTML = "";
+
+  // --- Header giorni ---
+  const days = [];
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(currentMonday);
+    d.setDate(currentMonday.getDate() + i);
+    days.push(d);
+  }
+  const sun = new Date(currentMonday);
+  sun.setDate(currentMonday.getDate() + 6);
+  days.push(sun);
+
+  let headHtml = "<tr>";
+  const monthLabel = mesiNomi[currentMonday.getMonth()].toUpperCase();
+  headHtml += '<th class="col-cat">' + monthLabel + '</th>';
+  for (let i = 0; i < days.length; i++) {
+    const d = days[i];
+    const isWeekend = (i >= 5);
+    headHtml += '<th class="day' + (isWeekend ? ' weekend' : '') + '">'
+              + '<span class="day-name">' + giorniNomi[d.getDay()] + '</span>'
+              + '<span class="day-num">' + d.getDate() + '</span></th>';
+  }
+  headHtml += "</tr>";
+  head.innerHTML = headHtml;
+
+  // --- Corpo ---
+  const key = isoDate(currentMonday);
+  const data = weeksData[key] || {};
+  const daysCount = days.length; // 7
+  const cellsData = loadCells(currentMonday);
+
+  // Selezione righe in base alla vista corrente
+  const mRows = currentView === "servizi" ? serviziMorningRows : morningRows;
+  const aRows = currentView === "servizi" ? serviziAfternoonRows : afternoonRows;
+  const fRows = currentView === "servizi" ? [] : fullDayRows;
+
+  // Aggiorna titolo documento in base alla vista
+  if (currentView === "servizi") {
+    document.getElementById("docTitle").textContent = "Turno Settimanale Infermieri · Servizi";
+    document.getElementById("docSubtitle").innerHTML = "Assegnazione del personale infermieristico ai servizi di reparto";
+    document.getElementById("toolbarTitle").textContent = "Gestione Infermieri · Servizi";
+    document.getElementById("toolbarLogo").textContent = "SV";
+  } else {
+    document.getElementById("docTitle").textContent = "Turno Settimanale Infermieri · Sale Operatorie";
+    document.getElementById("docSubtitle").innerHTML = "Assegnazione del personale infermieristico alle sale e servizi di reparto<span class=\"edit-hint no-print\">· i nomi delle sale sono modificabili (clicca sulla cella)</span>";
+    document.getElementById("toolbarTitle").textContent = "Gestione Infermieri · Sale Operatorie";
+    document.getElementById("toolbarLogo").textContent = "SO";
+  }
+
+  // Blocco MATTINA
+  body.appendChild(makeSectionBar("Mattina", "morning", daysCount));
+  mRows.forEach(row => body.appendChild(makeRow(row, days, data, "morning", cellsData, currentMonday)));
+
+  // Blocco POMERIGGIO
+  body.appendChild(makeSectionBar("Pomeriggio", "afternoon", daysCount));
+  aRows.forEach(row => body.appendChild(makeRow(row, days, data, "afternoon", cellsData, currentMonday)));
+
+  // Righe intere (Reperibilità / Assenze) — solo nella vista Sale Operatorie
+  fRows.forEach(row => body.appendChild(makeRow(row, days, data, "neutral", cellsData, currentMonday)));
+
+  // --- Display settimana ---
+  const endDate = new Date(currentMonday);
+  endDate.setDate(currentMonday.getDate() + 6);
+  const range = currentMonday.getDate() + " " + mesiNomi[currentMonday.getMonth()].slice(0,3)
+             + " – " + endDate.getDate() + " " + mesiNomi[endDate.getMonth()].slice(0,3)
+             + " " + endDate.getFullYear();
+  document.getElementById("weekDisplay").textContent = range;
+  document.getElementById("weekRange").textContent = range;
+  document.getElementById("weekNumber").textContent = weekNumber(currentMonday);
+
+  // Auto-resize di tutte le textarea dopo che il DOM è completo
+  // Usa setTimeout per assicurarsi che il layout sia calcolato
+  function resizeAll() {
+    each(document.querySelectorAll("textarea.cell-field"), autoResize);
+  }
+  resizeAll();
+  setTimeout(resizeAll, 50);
+  setTimeout(resizeAll, 200);
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(resizeAll);
+  }
+}
+
+/* ---------- Eventi ---------- */
+const allCellFields = () => document.querySelectorAll('.cell-field');
+
+/* Helper: itera su NodeList o Array (compatibile QtWebKit/wkhtmltopdf) */
+function each(list, fn) {
+  for (var i = 0; i < list.length; i++) fn(list[i], i);
+}
+
+/* ---------- Switch vista (Sale Operatorie / Servizi) ---------- */
+each(document.querySelectorAll(".view-tab"), function(tab) {
+  tab.addEventListener("click", function() {
+    each(document.querySelectorAll(".view-tab"), function(t) { t.classList.remove("active"); });
+    tab.classList.add("active");
+    currentView = tab.getAttribute("data-view");
+    render();
+  });
+});
+
+document.getElementById("prevWeek").addEventListener("click", () => {
+  const d = new Date(currentMonday); d.setDate(d.getDate() - 7); currentMonday = d; render();
+});
+document.getElementById("nextWeek").addEventListener("click", () => {
+  const d = new Date(currentMonday); d.setDate(d.getDate() + 7); currentMonday = d; render();
+});
+document.getElementById("todayWeek").addEventListener("click", () => {
+  currentMonday = getMonday(new Date()); render();
+});
+document.getElementById("printBtn").addEventListener("click", () => {
+  // Nascondi placeholder delle celle vuote prima di stampare
+  each(allCellFields(), function(f) {
+    if (!f.value) { f.setAttribute('data-old-ph', f.placeholder); f.placeholder = ''; }
+  });
+  document.body.classList.add('printing');
+  window.print();
+  // Ripristina dopo la stampa
+  setTimeout(() => {
+    document.body.classList.remove('printing');
+    each(allCellFields(), function(f) {
+      const old = f.getAttribute('data-old-ph');
+      if (old !== null) { f.placeholder = old; f.removeAttribute('data-old-ph'); }
+    });
+  }, 300);
+});
+
+/* ---------- Gestione stampa nativa (Ctrl+P) ---------- */
+window.addEventListener('beforeprint', () => {
+  each(allCellFields(), function(f) {
+    if (!f.value) { f.setAttribute('data-old-ph', f.placeholder); f.placeholder = ''; }
+  });
+  document.body.classList.add('printing');
+});
+window.addEventListener('afterprint', () => {
+  document.body.classList.remove('printing');
+  each(allCellFields(), function(f) {
+    const old = f.getAttribute('data-old-ph');
+    if (old !== null) { f.placeholder = old; f.removeAttribute('data-old-ph'); }
+  });
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+  if (e.key === "ArrowLeft")  document.getElementById("prevWeek").click();
+  if (e.key === "ArrowRight") document.getElementById("nextWeek").click();
+});
+
+/* ---------- Avvio ---------- */
+(function init(){
+  const isPrintMode = window.location.search.indexOf('print=1') !== -1;
+  // Parametro view per selezionare la vista (sale/servizi) via URL
+  // (compatibile QtWebKit: non usa URLSearchParams)
+  var viewParam = null;
+  var qs = window.location.search.substring(1);
+  var pairs = qs.split('&');
+  for (var pi = 0; pi < pairs.length; pi++) {
+    var kv = pairs[pi].split('=');
+    if (kv[0] === 'view') { viewParam = decodeURIComponent(kv[1] || ''); break; }
+  }
+  if (viewParam === 'servizi') {
+    currentView = 'servizi';
+    each(document.querySelectorAll(".view-tab"), function(t) {
+      // Compatibile QtWebKit: classList.toggle con 2 arg non supportato
+      if (t.getAttribute("data-view") === "servizi") { t.classList.add("active"); }
+      else { t.classList.remove("active"); }
+    });
+  } else if (viewParam === 'sale') {
+    currentView = 'sale';
+  }
+  if (weeksData[isoDate(currentMonday)]) {
+    render();
+  } else {
+    currentMonday = new Date("2026-06-15T00:00:00");
+    render();
+  }
+  // Modalità stampa (per generazione PDF via wkhtmltopdf con ?print=1):
+  // applicata DOPO render() così gli input esistono già
+  if (isPrintMode) {
+    document.body.classList.add('printing');
+    each(allCellFields(), function(f) { if (!f.value) f.placeholder = ''; });
+  }
+})();
+</script>
+</body>
+</html>
